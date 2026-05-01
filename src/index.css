@@ -1,0 +1,191 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --federal-blue: #0A2342;
+    --federal-blue-light: #1a3a5c;
+    --marble-white: #F5F5F0;
+    --liberty-gold: #C5A059;
+    --liberty-gold-light: #D4B87A;
+    --trust-green: #2D6A4F;
+    --alert-red: #C1121F;
+    --glass-bg: rgba(255, 255, 255, 0.08);
+    --glass-border: rgba(255, 255, 255, 0.15);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #0A2342 0%, #0d2e55 40%, #0f3566 100%);
+    min-height: 100vh;
+    color: #F5F5F0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Playfair Display', serif;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(197, 160, 89, 0.4); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(197, 160, 89, 0.7); }
+}
+
+@layer components {
+  /* Glass Cards */
+  .glass-card {
+    background: rgba(255,255,255,0.08);
+    @apply backdrop-blur-xl border border-white/10 rounded-2xl;
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300 hover:border-white/20 hover:shadow-xl hover:-translate-y-0.5;
+  }
+
+  /* Gold accent card */
+  .gold-card {
+    background: linear-gradient(135deg, rgba(197, 160, 89, 0.15), rgba(197, 160, 89, 0.05));
+    @apply border border-[#C5A059]/30 backdrop-blur-xl rounded-2xl;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    background: linear-gradient(135deg, #C5A059, #D4B87A);
+    @apply text-[#0A2342] font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-[#C5A059]/30 hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  .btn-ghost {
+    @apply bg-white/10 text-white font-medium px-5 py-2.5 rounded-xl border border-white/20 transition-all duration-200 hover:bg-white/20 hover:border-white/30;
+  }
+
+  .btn-whatsapp {
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    @apply text-white font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-green-500/30 hover:-translate-y-0.5 flex items-center gap-2;
+  }
+
+  .btn-danger {
+    @apply bg-[#C1121F]/20 text-red-300 border border-[#C1121F]/40 font-medium px-5 py-2.5 rounded-xl transition-all duration-200 hover:bg-[#C1121F]/30;
+  }
+
+  /* Nav links */
+  .nav-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-white/60 hover:text-white hover:bg-white/10 font-medium text-sm;
+  }
+  .nav-link.active {
+    @apply bg-white/15 text-white border border-white/20;
+  }
+
+  /* Section headers */
+  .section-label {
+    @apply text-[#C5A059] text-xs font-bold tracking-widest uppercase mb-1;
+  }
+
+  /* Status badges */
+  .badge-green {
+    @apply bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold px-2.5 py-1 rounded-full;
+  }
+  .badge-gold {
+    @apply bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30 text-xs font-semibold px-2.5 py-1 rounded-full;
+  }
+  .badge-red {
+    @apply bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-semibold px-2.5 py-1 rounded-full;
+  }
+  .badge-blue {
+    @apply bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold px-2.5 py-1 rounded-full;
+  }
+
+  /* Chat bubbles */
+  .chat-user {
+    background: linear-gradient(135deg, #C5A059, #D4B87A);
+    @apply text-[#0A2342] rounded-2xl rounded-br-sm px-4 py-3 max-w-xs ml-auto font-medium;
+  }
+  .chat-agent {
+    background: rgba(255,255,255,0.08);
+    @apply backdrop-blur-xl border border-white/10 text-white/90 rounded-2xl rounded-bl-sm px-4 py-3 max-w-sm mr-auto;
+  }
+
+  /* Timeline */
+  .timeline-node {
+    @apply w-4 h-4 rounded-full border-2 relative z-10 transition-all duration-300;
+  }
+  .timeline-node.completed {
+    @apply bg-[#C5A059] border-[#C5A059] shadow-lg shadow-[#C5A059]/40;
+  }
+  .timeline-node.active {
+    @apply bg-white border-white shadow-lg shadow-white/40 animate-pulse;
+  }
+  .timeline-node.future {
+    @apply bg-transparent border-white/30;
+  }
+
+  /* Progress ring */
+  .progress-ring {
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+  }
+
+  /* Share card (9:16 ratio for Instagram) */
+  .share-card {
+    aspect-ratio: 9/16;
+    @apply glass-card p-8 flex flex-col items-center justify-center text-center max-w-xs;
+  }
+
+  /* Language pill */
+  .lang-pill {
+    @apply px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer;
+  }
+  .lang-pill.selected {
+    background: rgba(197, 160, 89, 0.2);
+    @apply text-[#C5A059] border border-[#C5A059]/40;
+  }
+  .lang-pill:not(.selected) {
+    @apply text-white/50 hover:text-white/80 hover:bg-white/10;
+  }
+
+  /* Mobile bottom nav */
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-[#0A2342]/90 backdrop-blur-xl border-t border-white/10 z-50;
+  }
+}
+
+@layer utilities {
+  .text-gold { color: #C5A059; }
+  .bg-federal { background-color: #0A2342; }
+  .border-gold { border-color: rgba(197, 160, 89, 0.4); }
+
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, #C5A059, #F0D08C);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Animations */
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+  @keyframes glow {
+    from { box-shadow: 0 0 10px rgba(197, 160, 89, 0.2); }
+    to { box-shadow: 0 0 25px rgba(197, 160, 89, 0.5); }
+  }
+}
