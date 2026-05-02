@@ -7,10 +7,20 @@ const cors = require('cors');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { TranslationServiceClient } = require('@google-cloud/translate');
 
 // Services
-const aiService = require('./services/ai.service');
-const translationService = require('./services/translation.service');
+const AIService = require('./services/ai.service');
+const TranslationService = require('./services/translation.service');
+
+// 🚀 COMPOSITION ROOT: Injecting dependencies into services (SOLID Principle)
+const PROJECT_ID = 'electionwise-2026';
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const translationClient = new TranslationServiceClient();
+
+const aiService = new AIService(genAI);
+const translationService = new TranslationService(translationClient, PROJECT_ID);
 
 const app = express();
 app.use(compression());
@@ -21,10 +31,9 @@ app.use(express.json());
 
 /**
  * Security: Rate Limiting
- * Prevents API abuse and token exhaustion by limiting requests per IP address.
  */
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 100,
   message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
   standardHeaders: true,
@@ -51,22 +60,17 @@ const translateSchema = z.object({
 
 /**
  * POST /api/ask
- * Main AI agent endpoint. Delegated to AIService.
  */
 app.post('/api/ask', async (req, res) => {
   try {
     const { messages = [], language = 'English', selectedState = 'All India', mode = 'assistant' } = askSchema.parse(req.body || {});
-    
     if (messages.length === 0) return res.json({ reply: 'How can I help you today?' });
 
     const reply = await aiService.generateResponse(messages, language, selectedState, mode);
-    
     res.setHeader('Cache-Control', 'no-store');
     res.json({ reply });
-
   } catch (err) {
-    const keyPrefix = (process.env.GEMINI_API_KEY || '').substring(0, 8);
-    console.error(`[DEBUG] AI Error with Key (${keyPrefix}...):`, err.message);
+    console.error(`[AI Error]:`, err.message);
     res.json({ 
       reply: `[ElectionWise-v2-Live] I am currently helping many voters. Please visit voters.eci.gov.in or call 1950.`,
       error: err.message 
@@ -76,7 +80,6 @@ app.post('/api/ask', async (req, res) => {
 
 /**
  * POST /api/translate
- * Translation endpoint. Delegated to TranslationService.
  */
 app.post('/api/translate', async (req, res) => {
   try {
@@ -93,4 +96,4 @@ app.use(express.static(path.join(__dirname, '../dist')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../dist/index.html')));
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`ElectionWise server live on :${PORT}`));
+app.listen(PORT, () => console.log(`ElectionWise live on :${PORT}`));

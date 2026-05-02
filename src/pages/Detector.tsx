@@ -4,7 +4,7 @@ import { ShieldAlert, CheckCircle, XCircle, AlertTriangle, Search } from 'lucide
 import { useAppStore } from '../store';
 import { askAgent, cn } from '../lib/utils';
 import { logAnalyticsEvent } from '../lib/analytics';
-
+import PageContainer from '../components/shared/PageContainer';
 
 export default function Detector() {
   const { language, selectedState } = useAppStore();
@@ -19,7 +19,6 @@ export default function Detector() {
     try {
       const reply = await askAgent([{ role: 'user', content: claim }], language, selectedState, 'detector');
 
-      // Parse the response "VERDICT: [result]\nEXPLANATION: [text]"
       const verdictMatch = reply.match(/VERDICT:\s*(True|False|Misleading)/i);
       const explanationMatch = reply.split(/EXPLANATION:/i);
 
@@ -46,15 +45,13 @@ export default function Detector() {
     }
   }, [claim, language, selectedState, isAnalyzing]);
 
-
-
   return (
-    <div className="flex flex-col h-full max-h-screen px-4 py-6 sm:px-8 max-w-3xl mx-auto w-full">
+    <PageContainer className="px-4 py-6 sm:px-8 max-w-3xl mx-auto w-full overflow-y-auto">
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-bold tracking-widest uppercase mb-4">
           <ShieldAlert size={14} /> AI Misinformation Detector
         </div>
-        <h1 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Playfair Display, serif' }}>Verify Election Claims</h1>
+        <h1 className="text-3xl font-bold text-white mb-2 font-playfair">Verify Election Claims</h1>
         <p className="text-white/60 text-sm">Paste a WhatsApp forward, rumor, or news headline below. Our AI cross-references the claim with official ECI guidelines.</p>
       </div>
 
@@ -110,6 +107,6 @@ export default function Detector() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </PageContainer>
   );
 }

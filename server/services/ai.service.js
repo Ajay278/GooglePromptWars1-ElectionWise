@@ -1,16 +1,16 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
 /**
  * Service to handle all interactions with the Google Gemini AI.
  */
 class AIService {
   /**
+   * @param {import('@google/generative-ai').GoogleGenerativeAI} client
+   */
+  constructor(client) {
+    this.client = client;
+  }
+
+  /**
    * Generates a system instruction based on the user's mode and context.
-   * @param {string} mode - assistant, simulation, or detector
-   * @param {string} language - Target language for response
-   * @param {string} selectedState - Contextual Indian state
    */
   getSystemInstruction(mode, language, selectedState) {
     if (mode === 'detector') {
@@ -28,7 +28,7 @@ class AIService {
   async generateResponse(messages, language, selectedState, mode) {
     const systemInstruction = this.getSystemInstruction(mode, language, selectedState);
     
-    const model = genAI.getGenerativeModel({ 
+    const model = this.client.getGenerativeModel({ 
       model: 'gemini-2.5-flash',
       systemInstruction: { role: 'system', parts: [{ text: systemInstruction }] }
     });
@@ -45,4 +45,4 @@ class AIService {
   }
 }
 
-module.exports = new AIService();
+module.exports = AIService;

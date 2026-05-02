@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Bot } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../store';
 import { askAgent, generateId, whatsappShare } from '../lib/utils';
 import { logAnalyticsEvent } from '../lib/analytics';
@@ -10,6 +9,10 @@ import ChatHeader from '../components/assistant/ChatHeader';
 import ChatMessage from '../components/assistant/ChatMessage';
 import ChatInput from '../components/assistant/ChatInput';
 import Suggestions from '../components/assistant/Suggestions';
+
+// Shared components
+import PageContainer from '../components/shared/PageContainer';
+import LoadingDots from '../components/shared/LoadingDots';
 
 const RAW_SUGGESTIONS = [
   "My name isn't on the voter list. What do I do?",
@@ -87,7 +90,7 @@ export default function Assistant() {
   const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
 
   return (
-    <div className="flex flex-col h-full max-h-screen">
+    <PageContainer>
       <ChatHeader 
         language={language}
         setLanguage={setLanguage}
@@ -110,16 +113,7 @@ export default function Assistant() {
           {messages.map(msg => <ChatMessage key={msg.id} msg={msg} />)}
         </AnimatePresence>
 
-        {isLoading && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
-              <Bot size={13} className="text-indigo-400" />
-            </div>
-            <div className="bg-white/10 border border-white/15 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1">
-              {[0, 1, 2].map(i => <span key={i} className="w-2 h-2 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />)}
-            </div>
-          </motion.div>
-        )}
+        {isLoading && <LoadingDots />}
         <div ref={bottomRef} />
       </div>
 
@@ -131,6 +125,6 @@ export default function Assistant() {
         onSend={sendMessage}
         onToggleVoice={toggleVoiceInput}
       />
-    </div>
+    </PageContainer>
   );
 }

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Gamepad2, Send, Bot, RotateCcw } from 'lucide-react';
 import { useAppStore } from '../store';
 import { askAgent, generateId, cn } from '../lib/utils';
+import PageContainer from '../components/shared/PageContainer';
+import LoadingDots from '../components/shared/LoadingDots';
 
 export default function Simulation() {
   const { language, selectedState } = useAppStore();
@@ -47,7 +49,7 @@ export default function Simulation() {
   }
 
   return (
-    <div className="flex flex-col h-full max-h-screen">
+    <PageContainer>
       <div className="shrink-0 px-6 py-4 border-b border-white/10 flex items-center justify-between bg-white/5 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-green-500/40 to-emerald-500/40 border border-green-500/30 flex items-center justify-center">
@@ -67,7 +69,7 @@ export default function Simulation() {
         {messages.length === 0 && (
           <div className="text-center py-10">
             <Gamepad2 size={40} className="mx-auto text-emerald-400 mb-4 opacity-50" />
-            <h2 className="text-xl font-bold text-white mb-2">Polling Officer Simulator</h2>
+            <h2 className="text-xl font-bold text-white mb-2 font-playfair">Polling Officer Simulator</h2>
             <p className="text-white/50 text-sm max-w-sm mx-auto mb-6">Test your knowledge of ECI rules. You will be presented with real polling day scenarios (EVM issues, voter fraud, accessibility). Make the right call.</p>
             <button onClick={startGame} disabled={isLoading} className="px-6 py-3 bg-emerald-500/20 text-emerald-400 font-bold rounded-xl border border-emerald-500/30 hover:bg-emerald-500/30 transition-all">
               {isLoading ? 'Loading Scenario...' : 'Start Simulation'}
@@ -75,7 +77,7 @@ export default function Simulation() {
           </div>
         )}
 
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {messages.map(msg => (
             <motion.div key={msg.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
@@ -92,7 +94,7 @@ export default function Simulation() {
             </motion.div>
           ))}
         </AnimatePresence>
-        {isLoading && messages.length > 0 && <div className="text-emerald-400 text-xs ml-9">Game Master is thinking...</div>}
+        {isLoading && messages.length > 0 && <LoadingDots />}
         <div ref={bottomRef} />
       </div>
 
@@ -110,6 +112,6 @@ export default function Simulation() {
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
