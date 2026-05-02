@@ -102,10 +102,11 @@ app.post('/api/ask', async (req, res) => {
 
 
   } catch (err) {
-    console.error('CRITICAL AI ERROR:', err.message);
-    // 💡 SCOPE-SAFE FALLBACK: selectedState is now defined even here
+    const keyPrefix = (process.env.GEMINI_API_KEY || '').substring(0, 8);
+    console.error(`[DEBUG] AI Error with Key (${keyPrefix}...):`, err.message);
+    
     res.json({ 
-      reply: `[ElectionWise] I am currently helping many voters. For immediate ECI guidance in ${selectedState}, please visit voters.eci.gov.in or call 1950.`,
+      reply: `[ElectionWise-v2-Live] I am currently helping many voters. For immediate ECI guidance in ${selectedState}, please visit voters.eci.gov.in or call 1950.`,
       error: err.message 
     });
   }
