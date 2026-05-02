@@ -5,12 +5,14 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+const compression = require('compression');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { TranslationServiceClient } = require('@google-cloud/translate');
 const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
 
 const app = express();
+app.use(compression());
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 app.use(cors());
