@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldAlert, CheckCircle, XCircle, AlertTriangle, Search } from 'lucide-react';
 import { useAppStore } from '../store';
 import { askAgent, cn } from '../lib/utils';
+import { logAnalyticsEvent } from '../lib/analytics';
+
 
 export default function Detector() {
   const { language, selectedState } = useAppStore();
@@ -10,31 +12,41 @@ export default function Detector() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<{ verdict: 'True' | 'False' | 'Misleading' | 'Error'; explanation: string } | null>(null);
 
-  const analyzeClaim = async () => {
-    if (!claim.trim()) return;
+  const analyzeClaim = useCallback(async () => {
+    if (!claim.trim() || isAnalyzing) return;
     setIsAnalyzing(true);
     setResult(null);
     try {
       const reply = await askAgent([{ role: 'user', content: claim }], language, selectedState, 'detector');
-      
+
       // Parse the response "VERDICT: [result]\nEXPLANATION: [text]"
       const verdictMatch = reply.match(/VERDICT:\s*(True|False|Misleading)/i);
       const explanationMatch = reply.split(/EXPLANATION:/i);
-      
+
+      let finalVerdict: 'True' | 'False' | 'Misleading' | 'Error' = 'Error';
+
       if (verdictMatch && explanationMatch.length > 1) {
         const vStr = verdictMatch[1].toLowerCase();
+        finalVerdict = vStr === 'true' ? 'True' : vStr === 'false' ? 'False' : 'Misleading';
         setResult({
-          verdict: vStr === 'true' ? 'True' : vStr === 'false' ? 'False' : 'Misleading',
+          verdict: finalVerdict,
           explanation: explanationMatch[1].trim()
         });
       } else {
         setResult({ verdict: 'Error', explanation: 'Could not parse the AI response. Raw output: ' + reply });
       }
+
+      logAnalyticsEvent('fact_check', { verdict: finalVerdict });
+
     } catch {
       setResult({ verdict: 'Error', explanation: 'Failed to connect to the Fact-Checking API.' });
+      logAnalyticsEvent('fact_check', { verdict: 'Error' });
+    } finally {
+      setIsAnalyzing(false);
     }
-    setIsAnalyzing(false);
-  };
+  }, [claim, language, selectedState, isAnalyzing]);
+
+
 
   return (
     <div className="flex flex-col h-full max-h-screen px-4 py-6 sm:px-8 max-w-3xl mx-auto w-full">

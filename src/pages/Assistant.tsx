@@ -1,10 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, Sparkles, Share2, Trash2, Globe, Mic, MicOff, Volume2 } from 'lucide-react';
 import { useAppStore, LANGUAGES } from '../store';
 import { askAgent, generateId, whatsappShare, cn } from '../lib/utils';
+import { logAnalyticsEvent } from '../lib/analytics';
 
-const SUGGESTIONS = [
+
+
+const RAW_SUGGESTIONS = [
   "My name isn't on the voter list. What do I do?",
   "I'm a senior citizen and can't travel. Can I still vote?",
   "What ID documents can I bring to the polling booth?",
@@ -12,6 +15,7 @@ const SUGGESTIONS = [
   "My status says 'Under Adjudication'. What does that mean?",
   "How do I register as a first-time voter?",
 ];
+
 
 export default function Assistant() {
   const { messages, addMessage, clearMessages, language, setLanguage, selectedState } = useAppStore();
@@ -22,6 +26,10 @@ export default function Assistant() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isAutoSpeakEnabled, setIsAutoSpeakEnabled] = useState(false);
 
+  // Memoised suggestion list — never recreated between renders
+  const SUGGESTIONS = useMemo(() => RAW_SUGGESTIONS, []);
+
+
   // Stop speaking when unmounted
   useEffect(() => {
     return () => { window.speechSynthesis.cancel(); };
@@ -29,7 +37,7 @@ export default function Assistant() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading]);
 
-  async function sendMessage(text: string) {
+  const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
     const userMsg = { id: generateId(), role: 'user' as const, content: text.trim(), timestamp: Date.now() };
     addMessage(userMsg);
@@ -39,7 +47,10 @@ export default function Assistant() {
       const history = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
       const reply = await askAgent(history, language, selectedState, 'assistant');
       addMessage({ id: generateId(), role: 'assistant', content: reply, timestamp: Date.now() });
-      
+
+      // Fire-and-forget analytics — never blocks UX
+      logAnalyticsEvent('ai_query', { mode: 'assistant', language });
+
       // Text to speech for accessibility
       if ('speechSynthesis' in window && isAutoSpeakEnabled) {
         window.speechSynthesis.cancel(); // Stop current speech
@@ -51,17 +62,18 @@ export default function Assistant() {
         utterance.onend = () => setIsSpeaking(false);
         window.speechSynthesis.speak(utterance);
       }
-      
+
     } catch {
       addMessage({ id: generateId(), role: 'assistant', content: '⚠️ Unable to connect. Please try again or call the 1950 helpline.', timestamp: Date.now() });
     }
     setIsLoading(false);
-  }
+  }, [isLoading, messages, language, selectedState, addMessage, isAutoSpeakEnabled]);
 
-  const toggleVoiceInput = () => {
+
+  const toggleVoiceInput = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) return alert('Voice input is not supported in this browser.');
-    
+
     if (isListening) {
       setIsListening(false);
       return;
@@ -71,7 +83,7 @@ export default function Assistant() {
     const langMap: Record<string, string> = { 'hi': 'hi-IN', 'ta': 'ta-IN', 'te': 'te-IN', 'bn': 'bn-IN', 'en': 'en-IN' };
     recognition.lang = langMap[language] || 'en-IN';
     recognition.continuous = false;
-    
+
     recognition.onstart = () => setIsListening(true);
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
@@ -80,7 +92,8 @@ export default function Assistant() {
     };
     recognition.onend = () => setIsListening(false);
     recognition.start();
-  };
+  }, [isListening, language, sendMessage]);
+
 
   const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
 

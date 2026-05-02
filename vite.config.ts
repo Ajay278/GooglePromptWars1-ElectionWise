@@ -12,5 +12,14 @@ export default defineConfig({
   build: { outDir: 'dist' },
   test: {
     globals: true,
+    environment: 'happy-dom',
+    setupFiles: ['./tests/setup.ts'],
+
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/main.tsx'],
+    },
   }
 })
