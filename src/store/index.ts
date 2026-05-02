@@ -29,6 +29,11 @@ export const READINESS_TASKS = [
   { id: 'process', label: 'Understand the voting process', icon: '🗳️' },
 ];
 
+/**
+ * Centralized State Management (Zustand)
+ * Manages user preferences, chat history, and the Voter Readiness checklist.
+ * Persists data across sessions using local storage.
+ */
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -49,6 +54,9 @@ interface AppState {
   clearMessages: () => void;
 }
 
+/**
+ * The primary application hook for accessing globally shared state.
+ */
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({

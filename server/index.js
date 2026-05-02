@@ -1,15 +1,16 @@
 'use strict';
 require('dotenv').config();
 
-
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const compression = require('compression');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { TranslationServiceClient } = require('@google-cloud/translate');
 const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
+
+// Services
+const aiService = require('./services/ai.service');
+const translationService = require('./services/translation.service');
 
 const app = express();
 app.use(compression());
@@ -18,10 +19,13 @@ app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json());
 
-// Set up rate limiting
+/**
+ * Security: Rate Limiting
+ * Prevents API abuse and token exhaustion by limiting requests per IP address.
+ */
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 100,
   message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -29,7 +33,7 @@ const apiLimiter = rateLimit({
 
 app.use('/api/', apiLimiter);
 
-// Schemas for validation
+// Validation Schemas
 const askSchema = z.object({
   messages: z.array(z.object({
     role: z.string(),
@@ -45,70 +49,26 @@ const translateSchema = z.object({
   targetLanguage: z.string().optional()
 });
 
-
-const PROJECT_ID = 'electionwise-2026';
-// 🚀 USING ENVIRONMENT VARIABLE FOR SECURITY
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const translationClient = new TranslationServiceClient();
-
 /**
  * POST /api/ask
- * Main AI agent endpoint. Handles chat, simulation, and detector logic.
+ * Main AI agent endpoint. Delegated to AIService.
  */
 app.post('/api/ask', async (req, res) => {
-  // ── DEFINE VARIABLES OUTSIDE TRY BLOCK TO PREVENT REFERENCE ERRORS ──────
-  let messages = [];
-  let language = 'English';
-  let selectedState = 'All India';
-  let mode = 'assistant';
-
   try {
-    const validatedBody = askSchema.parse(req.body || {});
-    messages = validatedBody.messages || [];
-    language = validatedBody.language || 'English';
-    selectedState = validatedBody.selectedState || 'All India';
-    mode = validatedBody.mode || 'assistant';
+    const { messages = [], language = 'English', selectedState = 'All India', mode = 'assistant' } = askSchema.parse(req.body || {});
+    
+    if (messages.length === 0) return res.json({ reply: 'How can I help you today?' });
 
-    if (messages.length === 0) {
-      return res.json({ reply: 'How can I help you today?' });
-    }
-
-
-    let systemInstruction = '';
-    if (mode === 'detector') {
-      systemInstruction = `You are an expert Election Misinformation Detector. Analyze claims against ECI guidelines. Respond ONLY in ${language}. CRITICAL: Use the exact English labels 'VERDICT:' and 'EXPLANATION:' in your response regardless of the target language. format: VERDICT: [True/False/Misleading] EXPLANATION: [Brief]`;
-    } else if (mode === 'simulation') {
-      systemInstruction = `You are the Game Master for "Be the Election Officer". Respond in ${language}. Present booth scenarios.`;
-    } else {
-      systemInstruction = `You are ElectionWise, a civic guide. State: ${selectedState}. Language: ${language}. Grounded in ECI rules. Respond ONLY in ${language}.`;
-    }
-
-    // 🚀 USING THE STABLE "LATEST" ALIAS AS PER LOGS
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash',
-      systemInstruction: { role: 'system', parts: [{ text: systemInstruction }] }
-    });
-
-    const lastMessage = messages[messages.length - 1].content || 'Hello';
-    const history = messages.slice(0, -1).map(m => ({
-      role: (m.role === 'assistant' || m.role === 'model') ? 'model' : 'user',
-      parts: [{ text: m.content || '' }]
-    }));
-
-    const chat = model.startChat({ history });
-    const result = await chat.sendMessage(lastMessage);
-    const text = result.response.text();
-
+    const reply = await aiService.generateResponse(messages, language, selectedState, mode);
+    
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ reply: text });
-
+    res.json({ reply });
 
   } catch (err) {
     const keyPrefix = (process.env.GEMINI_API_KEY || '').substring(0, 8);
     console.error(`[DEBUG] AI Error with Key (${keyPrefix}...):`, err.message);
-    
     res.json({ 
-      reply: `[ElectionWise-v2-Live] I am currently helping many voters. For immediate ECI guidance in ${selectedState}, please visit voters.eci.gov.in or call 1950.`,
+      reply: `[ElectionWise-v2-Live] I am currently helping many voters. Please visit voters.eci.gov.in or call 1950.`,
       error: err.message 
     });
   }
@@ -116,34 +76,21 @@ app.post('/api/ask', async (req, res) => {
 
 /**
  * POST /api/translate
- * Translates texts to target language using Google Cloud Translation API.
+ * Translation endpoint. Delegated to TranslationService.
  */
 app.post('/api/translate', async (req, res) => {
   try {
-    const validatedBody = translateSchema.parse(req.body || {});
-    const text = validatedBody.text;
-    const targetLanguage = validatedBody.targetLanguage || 'en';
-
-    
-    const [response] = await translationClient.translateText({
-      parent: `projects/${PROJECT_ID}/locations/global`,
-      contents: Array.isArray(text) ? text : [text],
-      mimeType: 'text/plain',
-      targetLanguageCode: targetLanguage
-    });
-    res.json({ translations: response.translations.map(t => t.translatedText) });
+    const { text, targetLanguage = 'en' } = translateSchema.parse(req.body || {});
+    const translations = await translationService.translate(text, targetLanguage);
+    res.json({ translations });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Validation Error', details: err.errors });
-    }
-    console.error('Translation error:', err.message);
+    if (err instanceof z.ZodError) return res.status(400).json({ error: 'Validation Error', details: err.errors });
     res.json({ translations: Array.isArray(req.body?.text) ? req.body.text : [req.body?.text || ''] });
   }
-
 });
 
 app.use(express.static(path.join(__dirname, '../dist')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../dist/index.html')));
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`ElectionWise server live on :${PORT}`));
